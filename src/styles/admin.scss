@@ -1,0 +1,143 @@
+/* Admin page styles to match Home theme */
+.admin-page {
+  padding: 20px;
+
+  .admin-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+
+  h2 {
+    color: #fff;
+    margin: 0;
+  }
+
+  .ant-table {
+    background: transparent !important;
+  }
+
+  .admin-card {
+    background: #151b3d;
+    border: 1px solid #1e2749;
+    padding: 16px;
+    border-radius: 8px;
+    /* Ensure small tables don't get an inner vertical scrollbar */
+    overflow: visible;
+
+    .logo-section {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+
+      .logo-icon {
+        width: 40px;
+        height: 40px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+      }
+
+      .title {
+        color: #fff;
+        font-size: 20px;
+        font-weight: 700;
+      }
+    }
+  }
+
+  /* Make the table visuals match the accounts table on Home */
+  .admin-card {
+    .ant-table-wrapper {
+      background: transparent !important;
+      /* allow horizontal scrolling when needed, but force no vertical scrollbar
+         so the card expands to fit small tables */
+      overflow-x: auto;
+      overflow-y: hidden !important;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    /* Ant table body can sometimes add its own scroll; hide vertical scrollbar
+       while preserving horizontal scrolling */
+    .ant-table-body,
+    .ant-table-content {
+      overflow-y: hidden !important;
+      max-height: none !important;
+    }
+
+    /* Hide WebKit scrollbar inside the card */
+    .ant-table-body::-webkit-scrollbar,
+    .ant-table-wrapper::-webkit-scrollbar {
+      width: 0 !important;
+      height: 0 !important;
+      background: transparent !important;
+    }
+
+    /* Hide Firefox scrollbar */
+    .ant-table-body,
+    .ant-table-wrapper {
+      scrollbar-width: none !important;
+      -ms-overflow-style: none !important;
+    }
+
+    .ant-table {
+      background: transparent !important;
+    }
+
+    .ant-table-container {
+      background: transparent !important;
+    }
+
+    .ant-table-content {
+      background: transparent !important;
+    }
+
+    .ant-card-head {
+      background: transparent !important;
+      border-bottom: 1px solid #1e2749;
+      padding: 16px !important;
+    }
+
+    .ant-table-tbody > tr {
+      background: transparent !important;
+
+      &:hover > td {
+        background: rgba(30, 39, 73, 0.3) !important;
+      }
+    }
+
+    .ant-table-tbody > tr > td {
+      background: transparent !important;
+      border-bottom: 1px solid #1e2749 !important;
+      color: #fff;
+    }
+
+    .ant-table-thead > tr > th {
+      background: transparent !important;
+      border-bottom: 1px solid #1e2749 !important;
+      color: #888 !important;
+      font-weight: 600;
+    }
+
+    .custom-table {
+      .ant-table {
+        min-width: 640px;
+      }
+    }
+  }
+
+  .ant-modal {
+    .ant-input {
+      width: 100%;
+    }
+  }
+
+  .actions {
+    display: flex;
+    gap: 8px;
+  }
+}

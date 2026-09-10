@@ -1,0 +1,198 @@
+.accounts-table-card {
+  background: #151b3d !important;
+  border: 1px solid #1e2749;
+  border-radius: 8px;
+
+  .ant-card-head {
+    background: transparent !important;
+    border-bottom: 1px solid #1e2749;
+    padding: 16px !important;
+  }
+
+  .ant-card-body {
+    background: transparent !important;
+    padding: 16px !important;
+  }
+
+  // Make card body more compact on small screens
+  @media (max-width: 768px) {
+    .ant-card-body {
+      padding: 12px !important;
+    }
+
+    .ant-card-head {
+      padding: 12px !important;
+    }
+
+    .card-title {
+      font-size: 14px;
+    }
+  }
+
+  @media (max-width: 480px) {
+    border-radius: 8px !important;
+
+    .ant-card-head {
+      padding: 10px !important;
+    }
+
+    .ant-card-body {
+      padding: 10px !important;
+    }
+
+    .card-title {
+      font-size: 13px;
+      font-weight: 600;
+    }
+  }
+
+  .card-title {
+    color: white;
+    font-size: 16px;
+    font-weight: 600;
+  }
+
+  .folder-button {
+    background: #4ecdc4;
+    border-color: #4ecdc4;
+    font-weight: 500;
+
+    &:hover {
+      background: #45b8b0;
+      border-color: #45b8b0;
+    }
+
+    @media (max-width: 480px) {
+      font-size: 12px;
+      padding: 6px 12px !important;
+    }
+  }
+
+  .export-selected-button {
+    &.ant-btn[disabled],
+    &[disabled] {
+      color: #fff !important;
+    }
+  }
+
+  .profile-cell {
+    cursor: pointer;
+
+    .profile-name {
+      color: white;
+      font-weight: 500;
+    }
+
+    .profile-updated {
+      color: #666;
+      font-size: 12px;
+    }
+  }
+
+  .data-cell {
+    color: white;
+  }
+
+  .metric-pill {
+    display: inline-flex;
+    min-width: 30px;
+    height: 26px;
+    align-items: center;
+    justify-content: center;
+    margin-left: 4px;
+    border-radius: 7px;
+    color: #fff;
+    font-weight: 600;
+  }
+
+  .metric-pill--media {
+    background: rgba(245, 158, 11, 0.28);
+    border: 1px solid rgba(245, 158, 11, 0.5);
+  }
+
+  .metric-pill--comment-reaction {
+    background: rgba(167, 139, 250, 0.28);
+    border: 1px solid rgba(167, 139, 250, 0.5);
+  }
+
+  .action-button-primary {
+    color: #5b8dee;
+  }
+
+  .action-button-secondary {
+    color: #888;
+  }
+
+  // Table specific styles
+  .ant-table-wrapper {
+    background: transparent !important;
+    overflow-x: visible;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .ant-table {
+    background: transparent !important;
+  }
+
+  .ant-table-container {
+    background: transparent !important;
+  }
+
+  .ant-table-content {
+    background: transparent !important;
+  }
+
+  .ant-table-tbody > tr {
+    background: transparent !important;
+
+    &:hover > td {
+      background: rgba(30, 39, 73, 0.3) !important;
+    }
+  }
+
+  .ant-table-tbody > tr > td {
+    background: transparent !important;
+    border-bottom: 1px solid #1e2749 !important;
+  }
+
+  /* Ensure table has a minimum width so columns don't wrap awkwardly */
+  .custom-table {
+    .ant-table {
+      min-width: 980px;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .custom-table {
+      .ant-table {
+        min-width: 900px;
+      }
+    }
+  }
+
+  .ant-table-thead > tr > th {
+    background: transparent !important;
+    border-bottom: 1px solid #1e2749 !important;
+    color: #888 !important;
+  }
+
+  @media (max-width: 480px) {
+    .custom-table {
+      .ant-table {
+        min-width: 860px;
+        font-size: 12px;
+      }
+
+      .ant-table-thead > tr > th {
+        font-size: 10px;
+        padding: 8px 6px !important;
+        font-weight: 600;
+      }
+
+      .ant-table-tbody > tr > td {
+        padding: 8px 6px !important;
+        font-size: 11px;
+      }
+    }
+  }
+}
