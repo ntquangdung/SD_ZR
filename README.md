@@ -1,73 +1,71 @@
-# React + TypeScript + Vite
+# FB Pulse Tracker
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Ứng dụng React/TypeScript dùng để đọc dữ liệu hoạt động Facebook từ file ZIP hoặc JSON, tổng hợp comment/reaction/media và xuất báo cáo Excel.
 
-Currently, two official plugins are available:
+## Chức năng chính
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- Nhập trực tiếp file ZIP Facebook Takeout hoặc file JSON tương thích.
+- Nhận diện comment văn bản, comment có media và reaction của comment/bài viết.
+- Khôi phục `Post URL` từ dữ liệu URL thật trong gói Facebook khi nguồn không cung cấp link trực tiếp cho comment.
+- Lọc, thống kê và hiển thị dữ liệu theo tài khoản.
+- Xuất Excel Unicode, hạn chế lỗi font tiếng Việt và loại bỏ các dòng trống không có dữ liệu.
+- Đăng nhập và lưu dữ liệu ứng dụng bằng Firebase.
 
-## React Compiler
+> Lưu ý: Facebook Takeout thường không cung cấp `comment_id`. Vì vậy, URL bài viết có thể được ghép theo dữ liệu nhóm và thời gian gần nhất; ứng dụng không tự tạo URL comment giả.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Yêu cầu
 
-## Expanding the ESLint configuration
+- Node.js 22 trở lên
+- npm
+- Một Firebase Web App đã bật Authentication và Firestore
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## Chạy local
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm ci
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Sao chép `.env.example` thành `.env.local`, sau đó điền cấu hình Firebase Web App:
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```env
+VITE_FIREBASE_API_KEY=...
+VITE_FIREBASE_AUTH_DOMAIN=...
+VITE_FIREBASE_PROJECT_ID=...
+VITE_FIREBASE_STORAGE_BUCKET=...
+VITE_FIREBASE_MESSAGING_SENDER_ID=...
+VITE_FIREBASE_APP_ID=...
 ```
+
+Khởi chạy ứng dụng:
+
+```bash
+npm run dev
+```
+
+Vite sẽ hiển thị địa chỉ local, thường là `http://localhost:5173`.
+
+## Kiểm tra trước khi phát hành
+
+```bash
+npm run lint
+npm run build
+```
+
+## Triển khai GitHub Pages
+
+Workflow `.github/workflows/deploy-pages.yml` tự động build và deploy mỗi khi có commit mới trên nhánh `main`.
+
+Trong repository GitHub, tạo sáu Actions Secrets có tên giống các biến `VITE_FIREBASE_*` trong `.env.example`. Không commit `.env.local`, dữ liệu Facebook, file ZIP, thư mục `dist` hoặc `node_modules`.
+
+Sau khi bật **Settings → Pages → Source: GitHub Actions**, website mặc định của repository này là:
+
+`https://ntquangdung.github.io/SD_ZR/`
+
+## Cấu trúc chính
+
+- `src/`: giao diện, xử lý dữ liệu và tích hợp Firebase.
+- `src/utils/facebookImport.ts`: đọc dữ liệu Facebook ZIP/JSON.
+- `src/utils/nativeJsonImport.ts`: đọc định dạng JSON nội bộ.
+- `tools/`: công cụ chuyển đổi Excel/JSON và đóng gói ZIP.
+- `.github/workflows/`: CI/CD cho GitHub Pages.
+
