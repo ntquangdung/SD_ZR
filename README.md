@@ -13,6 +13,13 @@
 
 > Lưu ý: Facebook Takeout thường không cung cấp `comment_id`. Vì vậy, URL bài viết có thể được ghép theo dữ liệu nhóm và thời gian gần nhất; ứng dụng không tự tạo URL comment giả.
 
+### Quy tắc ghép Post URL
+
+- Chỉ ghép từ reaction của bài viết thuộc đúng tài khoản và đúng tên nhóm.
+- Ưu tiên reaction gần thời điểm comment nhất; tối đa 7 ngày. Các kết quả quá 1 giờ được đánh dấu độ tin cậy thấp trong dữ liệu nội bộ.
+- Một bài viết có thể có nhiều comment, vì vậy cùng một Post URL được phép xuất hiện ở nhiều dòng và không bị xóa khi trùng.
+- Nếu gói Facebook không có reaction phù hợp, Post URL được để trống thay vì tạo link giả.
+
 ## Yêu cầu
 
 - Node.js 22 trở lên
@@ -68,4 +75,3 @@ Sau khi bật **Settings → Pages → Source: GitHub Actions**, website mặc �
 - `src/utils/nativeJsonImport.ts`: đọc định dạng JSON nội bộ.
 - `tools/`: công cụ chuyển đổi Excel/JSON và đóng gói ZIP.
 - `.github/workflows/`: CI/CD cho GitHub Pages.
-

@@ -417,27 +417,35 @@ const nearestByTimestamp = (
   return best;
 };
 
+const HIGH_CONFIDENCE_DELTA_SECONDS = 5 * 60;
+const MEDIUM_CONFIDENCE_DELTA_SECONDS = 60 * 60;
+const STANDARD_MATCH_DELTA_SECONDS = 24 * 60 * 60;
+const MAXIMUM_MATCH_DELTA_SECONDS = 7 * 24 * 60 * 60;
+
 export const matchCommentsToPostUrls = (
   comments: CommentRecord[],
   reactions: ReactionRecord[],
 ): CommentRecord[] => {
   // Facebook stores comments and reactions in separate activity files. The
   // only reliable join keys available in many exports are the group name and
-  // activity time. Use the nearest real URL in the same group, but never cross
-  // accounts/groups and never bridge activity days.
-  const maxDeltaSeconds = 24 * 60 * 60;
+  // activity time. Match only real post reactions from the same group. A
+  // reaction is intentionally NOT consumed after a match: several comments
+  // can legitimately belong to the same post and must keep the same URL.
   const reactionsByGroup = new Map<string, ReactionRecord[]>();
 
   for (const reaction of reactions) {
-    if (!normalizeHttpUrl(reaction.linkPost) || reaction.reactionTime <= 0) continue;
+    if (!normalizeHttpUrl(reaction.linkPost) || reaction.reactionTime <= 0) {
+      continue;
+    }
     const candidateNames = reaction.targetGroupNames?.length
       ? reaction.targetGroupNames
       : Array.isArray(reaction.matchNames)
         ? reaction.matchNames
       : [reaction.commentAuthorName, reaction.ownerName];
-    for (const name of candidateNames) {
-      const key = normalizeMatchKey(name);
-      if (!key) continue;
+    const groupKeys = new Set(
+      candidateNames.map(normalizeMatchKey).filter(Boolean),
+    );
+    for (const key of groupKeys) {
       const bucket = reactionsByGroup.get(key) ?? [];
       bucket.push(reaction);
       reactionsByGroup.set(key, bucket);
@@ -457,21 +465,44 @@ export const matchCommentsToPostUrls = (
       };
     }
     const groupKey = normalizeMatchKey(comment.group);
-    const bucket = groupKey ? reactionsByGroup.get(groupKey) ?? [] : [];
-    const nearest =
-      comment.commentTime > 0 && bucket.length
-        ? nearestByTimestamp(bucket, comment.commentTime)
-        : null;
-
-    if (!nearest || nearest.delta > maxDeltaSeconds) {
+    if (!groupKey || comment.commentTime <= 0) {
       return {
         ...comment,
         postUrl: "",
         matchDeltaSeconds: null,
         matchConfidence: "UNMATCHED",
-        matchMethod: "",
+        matchMethod: "MISSING_GROUP_OR_TIMESTAMP",
         matchedReactionTime: null,
         matchedReactionFbid: "",
+      };
+    }
+
+    const bucket = reactionsByGroup.get(groupKey) ?? [];
+    const nearest = bucket.length
+      ? nearestByTimestamp(bucket, comment.commentTime)
+      : null;
+
+    if (!nearest) {
+      return {
+        ...comment,
+        postUrl: "",
+        matchDeltaSeconds: null,
+        matchConfidence: "UNMATCHED",
+        matchMethod: "NO_POST_REACTION_FOR_GROUP",
+        matchedReactionTime: null,
+        matchedReactionFbid: "",
+      };
+    }
+
+    if (nearest.delta > MAXIMUM_MATCH_DELTA_SECONDS) {
+      return {
+        ...comment,
+        postUrl: "",
+        matchDeltaSeconds: nearest.delta,
+        matchConfidence: "UNMATCHED",
+        matchMethod: "NEAREST_POST_REACTION_OVER_7_DAYS",
+        matchedReactionTime: nearest.reaction.reactionTime,
+        matchedReactionFbid: nearest.reaction.fbid,
       };
     }
 
@@ -480,12 +511,15 @@ export const matchCommentsToPostUrls = (
       postUrl: normalizeHttpUrl(nearest.reaction.linkPost),
       matchDeltaSeconds: nearest.delta,
       matchConfidence:
-        nearest.delta <= 5 * 60
+        nearest.delta <= HIGH_CONFIDENCE_DELTA_SECONDS
           ? "HIGH"
-          : nearest.delta <= 60 * 60
+          : nearest.delta <= MEDIUM_CONFIDENCE_DELTA_SECONDS
             ? "MEDIUM"
             : "LOW",
-      matchMethod: "EXACT_GROUP_NEAREST_TIMESTAMP",
+      matchMethod:
+        nearest.delta <= STANDARD_MATCH_DELTA_SECONDS
+          ? "EXACT_GROUP_NEAREST_TIMESTAMP"
+          : "EXACT_GROUP_NEAREST_TIMESTAMP_EXTENDED",
       matchedReactionTime: nearest.reaction.reactionTime,
       matchedReactionFbid: nearest.reaction.fbid,
     };
