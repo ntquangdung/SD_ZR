@@ -25,3 +25,7 @@ outputs/
 *.sln
 *.sw?
 .env
+
+# Python-generated caches (conversion helpers)
+__pycache__/
+*.py[cod]

@@ -21,10 +21,31 @@ import {
   normalizeInlineText,
 } from "@/utils/facebookData";
 import { matchCommentsToPostUrls } from "@/utils/facebookImport";
+import {
+  appendDuplicateUrlReport,
+  DUPLICATE_URL_SHEET_NAMES,
+  type ExportedUrlRow,
+} from "@/utils/duplicateUrlReport";
 
 // If selectedIds is provided, export only those imports; otherwise export all.
 type ExcelValue = string | number;
 type StyledCell = CellObject & { s?: object };
+
+const reserveAccountSheetName = (accountName: string, usedNames: Set<string>) => {
+  const baseName = accountName
+    .replace(/[:\\/?*[\]|]/g, "")
+    .trim()
+    .slice(0, 31)
+    .replace(/^'+|'+$/g, "") || "Sheet";
+  let name = baseName;
+  let counter = 1;
+  while (usedNames.has(name.toLowerCase())) {
+    const suffix = `_${++counter}`;
+    name = baseName.slice(0, 31 - suffix.length) + suffix;
+  }
+  usedNames.add(name.toLowerCase());
+  return name;
+};
 
 export const exportAllImportsToExcel = async (
   selectedIds?: string[],
@@ -37,7 +58,7 @@ export const exportAllImportsToExcel = async (
     const importsList: Array<{ id: string; data: Omit<ImportRecord, "id"> }> = [];
 
     if (selectedIds && selectedIds.length > 0) {
-      for (const id of selectedIds) {
+      for (const id of new Set(selectedIds)) {
         const importDocRef = doc(db, "imports", id);
         const importSnap = await getDoc(importDocRef);
         if (importSnap.exists()) {
@@ -77,12 +98,18 @@ export const exportAllImportsToExcel = async (
     }
 
     const workbook = XLSX.utils.book_new();
-    // track used sheet names via workbook.SheetNames for robustness
+    const exportedUrlRows: ExportedUrlRow[] = [];
+    // Excel sheet names are case-insensitive. Reserve report names up front so
+    // source links always point to the final, unambiguous account sheet name.
+    const usedSheetNames = new Set(
+      Object.values(DUPLICATE_URL_SHEET_NAMES).map((name) => name.toLowerCase()),
+    );
 
     for (const importEntry of importsList) {
       const importId = importEntry.id;
       const accountName =
         normalizeInlineText(importEntry.data.accountName) || "Unknown";
+      const finalName = reserveAccountSheetName(accountName, usedSheetNames);
 
       const rows: ExcelValue[][] = [];
       const hyperlinkCells: Array<{ row: number; column: number; url: string }> = [];
@@ -210,8 +237,31 @@ export const exportAllImportsToExcel = async (
           }
       });
 
-      // compute totals from rows (respecting any filters applied above)
-      // totals are computed via Excel SUBTOTAL formulas below, so local variables not needed
+      // Include the header and totals row; never write a workbook beyond
+      // Excel's worksheet/hyperlink limits or silently discard occurrences.
+      if (rows.length + 1 > 1_048_576 || hyperlinkCells.length > 65_530) {
+        throw new RangeError(
+          `Sheet ${finalName} vượt giới hạn Excel (1.048.576 dòng hoặc 65.530 liên kết). Hãy thu hẹp khoảng ngày hoặc xuất ít lượt import hơn.`,
+        );
+      }
+
+      // Capture only the rows actually exported, after filtering/skipping empty
+      // containers. The header is row 1; totals are not URL occurrences.
+      rows.forEach((row, index) => {
+        if (index === 0 || !row[6]) return;
+        exportedUrlRows.push({
+          url: String(row[6]),
+          sheetName: finalName,
+          rowNumber: index + 1,
+          accountName,
+          importId,
+          type: String(row[0]),
+          content: String(row[2]),
+          date: String(row[3]),
+          title: String(row[4]),
+          location: String(row[5]),
+        });
+      });
 
       // totals using SUBTOTAL over helper columns so they update when user filters in Excel
       // We'll create a single merged cell across A:G with a concatenated formula
@@ -219,8 +269,12 @@ export const exportAllImportsToExcel = async (
       const dataEndRow = rows.length; // current last row index (before adding totals)
 
       // Helper columns are H/I.
-      const subtotalComments = `SUBTOTAL(9,H${dataStartRow}:H${dataEndRow})`;
-      const subtotalReactions = `SUBTOTAL(9,I${dataStartRow}:I${dataEndRow})`;
+      const subtotalComments = dataEndRow >= dataStartRow
+        ? `SUBTOTAL(9,H${dataStartRow}:H${dataEndRow})`
+        : "0";
+      const subtotalReactions = dataEndRow >= dataStartRow
+        ? `SUBTOTAL(9,I${dataStartRow}:I${dataEndRow})`
+        : "0";
       const concatFormula = `="Tổng: Comments: " & ${subtotalComments} & " - Reactions: " & ${subtotalReactions}`;
 
       // Put the concatenated formula in A and keep H/I numeric for filtering.
@@ -303,30 +357,18 @@ export const exportAllImportsToExcel = async (
         // non-fatal: continue without autofilter if something goes wrong
         console.warn("Could not add autofilter to sheet", e);
       }
-      // sanitize and ensure unique sheet name (Excel limit: 31 chars)
-      const sanitize = (s: string) =>
-        s.replace(/[:\\/?*[\]|]/g, "").trim() || "Sheet";
-
-      const maxLen = 31;
-      const baseName = sanitize(accountName).substring(0, maxLen);
-
-      // ensure uniqueness by checking existing workbook sheet names
-      const existing = new Set((workbook.SheetNames || []).map((n) => n.toString()));
-      let finalName = baseName;
-      let counter = 1;
-      while (existing.has(finalName)) {
-        const suffix = `_${++counter}`;
-        const allowedBaseLen = Math.max(1, maxLen - suffix.length);
-        finalName = baseName.substring(0, allowedBaseLen) + suffix;
-      }
-      // append and mark as used
       XLSX.utils.book_append_sheet(workbook, sheet, finalName);
     }
 
+    const report = appendDuplicateUrlReport(workbook, exportedUrlRows, XLSX);
     XLSX.writeFile(workbook, "accounts-comments-reactions.xlsx", { cellStyles: true });
-    message.success("Export thành công ✅");
+    message.success(
+      report.duplicateUrlCount > 0
+        ? `Export thành công: ${report.duplicateUrlCount} URL trùng tại ${report.occurrenceCount} dòng. Xem các sheet URL trùng.`
+        : "Export thành công — không có URL trùng trong dữ liệu đã xuất ✅",
+    );
   } catch (err) {
-    message.error("Export thất bại ❌");
+    message.error(err instanceof RangeError ? err.message : "Export thất bại ❌");
     console.error("Export thất bại ❌", err);
   }
 };

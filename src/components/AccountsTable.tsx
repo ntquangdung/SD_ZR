@@ -314,41 +314,48 @@ export const AccountsTable = forwardRef<AccountsTableRef, AccountsTableProps>(
       <Card
         className="accounts-table-card"
         extra={
-          <Space>
-            <Button
-              type="primary"
-              icon={<FolderOpenOutlined />}
-              className="folder-button"
-              onClick={async () => {
-                try {
-                  showLoading("export");
-                  await exportAllImportsToExcel(undefined, filter);
-                } finally {
-                  closeLoading("export");
-                }
-              }}
-            >
-              Export tất cả
-            </Button>
-            <Button
-              type="default"
-              className="export-selected-button"
-              disabled={selectedRowKeys.length === 0}
-              onClick={async () => {
-                try {
-                  showLoading("export");
-                  await exportAllImportsToExcel(
-                    selectedRowKeys as string[],
-                    filter,
-                  );
-                } finally {
-                  closeLoading("export");
-                }
-              }}
-            >
-              Export theo lựa chọn
-            </Button>
-          </Space>
+          <div className="export-actions">
+            <Space wrap>
+              <Button
+                type="primary"
+                icon={<FolderOpenOutlined />}
+                className="folder-button"
+                onClick={async () => {
+                  try {
+                    showLoading("export");
+                    await exportAllImportsToExcel(undefined, filter);
+                  } finally {
+                    closeLoading("export");
+                  }
+                }}
+              >
+                Export tất cả
+              </Button>
+              <Button
+                type="default"
+                className="export-selected-button"
+                disabled={selectedRowKeys.length === 0}
+                onClick={async () => {
+                  try {
+                    showLoading("export");
+                    await exportAllImportsToExcel(
+                      selectedRowKeys as string[],
+                      filter,
+                    );
+                  } finally {
+                    closeLoading("export");
+                  }
+                }}
+              >
+                Export theo lựa chọn
+              </Button>
+            </Space>
+            <Tooltip title="Báo cáo theo URL ở cột G của các dòng được xuất, gồm comment, media và reaction. Không xóa dữ liệu trùng.">
+              <span className="export-report-hint">
+                Excel kèm 2 sheet URL trùng: tổng hợp và vị trí chi tiết
+              </span>
+            </Tooltip>
+          </div>
         }
       >
         <Table
