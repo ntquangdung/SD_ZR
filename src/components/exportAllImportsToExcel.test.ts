@@ -3,6 +3,7 @@ import * as XLSX from "xlsx";
 import type { WorkBook, WorkSheet } from "xlsx";
 import type { CommentRecord, ReactionRecord } from "@/types/domain";
 import { DUPLICATE_URL_SHEET_NAMES } from "@/utils/duplicateUrlReport";
+import { COMMENT_TOTALS_SHEET_NAME } from "@/utils/commentUrlTotals";
 import { exportAllImportsToExcel } from "./exportAllImportsToExcel";
 
 const mocks = vi.hoisted(() => ({
@@ -130,7 +131,7 @@ describe("exportAllImportsToExcel URL duplicate reports", () => {
 
     const workbook = exportedWorkbook();
     expect(workbook.SheetNames).toEqual([
-      "O'Brien", "O'Brien_2", ...Object.values(DUPLICATE_URL_SHEET_NAMES),
+      COMMENT_TOTALS_SHEET_NAME, "O'Brien", "O'Brien_2", ...Object.values(DUPLICATE_URL_SHEET_NAMES),
     ]);
     const source = workbook.Sheets["O'Brien"];
     expect(source.A2.v).toBe("Comment");
@@ -146,6 +147,10 @@ describe("exportAllImportsToExcel URL duplicate reports", () => {
     expect(source.I8.f).toBe("SUBTOTAL(9,I2:I7)");
     expect(source["!autofilter"]?.ref).toBe("A1:I7");
     expect(source["!cols"]?.slice(7).every((column) => column.hidden)).toBe(true);
+    const totals = workbook.Sheets[COMMENT_TOTALS_SHEET_NAME];
+    // Same account across imports: 5 text + 1 media; two repeats of postUrl.
+    expect(XLSX.utils.sheet_to_json(totals, { header: 1, range: "A2:G2" })[0])
+      .toEqual(["O'Brien", 5, 1, 6, 2, 4, 1]);
 
     const summary = reportRows(workbook.Sheets[DUPLICATE_URL_SHEET_NAMES.summary]);
     expect(summary).toHaveLength(2);
@@ -193,13 +198,13 @@ describe("exportAllImportsToExcel URL duplicate reports", () => {
 
     const workbook = exportedWorkbook();
     expect(workbook.SheetNames).toEqual([
-      `${summaryName}_2`, `${summaryName.toLowerCase()}_3`,
+      COMMENT_TOTALS_SHEET_NAME, `${summaryName}_2`, `${summaryName.toLowerCase()}_3`,
       `${DUPLICATE_URL_SHEET_NAMES.details}_2`, ...Object.values(DUPLICATE_URL_SHEET_NAMES),
     ]);
     expect(mocks.getDocs).not.toHaveBeenCalled();
     expect(reportRows(workbook.Sheets[DUPLICATE_URL_SHEET_NAMES.summary])[0][2]).toBe(3);
     const details = reportRows(workbook.Sheets[DUPLICATE_URL_SHEET_NAMES.details]);
-    expect(details.map((row) => row[5])).toEqual(workbook.SheetNames.slice(0, 3));
+    expect(details.map((row) => row[5])).toEqual(workbook.SheetNames.slice(1, 4));
     expect(details.every((row) => row[6] === 2)).toBe(true);
   });
 
@@ -212,7 +217,8 @@ describe("exportAllImportsToExcel URL duplicate reports", () => {
     await exportAllImportsToExcel(undefined, { name: ["Ngọc Dung"] });
 
     const workbook = exportedWorkbook();
-    expect(workbook.SheetNames).toEqual(["Ngọc Dung", ...Object.values(DUPLICATE_URL_SHEET_NAMES)]);
+    expect(workbook.SheetNames).toEqual([COMMENT_TOTALS_SHEET_NAME, "Ngọc Dung", ...Object.values(DUPLICATE_URL_SHEET_NAMES)]);
+    expect(workbook.Sheets[COMMENT_TOTALS_SHEET_NAME].D2.v).toBe(1);
     expect(reportRows(workbook.Sheets[DUPLICATE_URL_SHEET_NAMES.summary])).toEqual([]);
     expect(reportRows(workbook.Sheets[DUPLICATE_URL_SHEET_NAMES.details])).toEqual([]);
     expect(mocks.success).toHaveBeenCalledWith(expect.stringContaining("không có URL trùng"));
@@ -233,6 +239,8 @@ describe("exportAllImportsToExcel URL duplicate reports", () => {
     expect(reportRows(workbook.Sheets[DUPLICATE_URL_SHEET_NAMES.summary])[0].slice(2, 5))
       .toEqual([3, 2, 1]);
     expect(comments.every((row) => row.postUrl === "")).toBe(true);
+    expect(workbook.Sheets[COMMENT_TOTALS_SHEET_NAME].E2.v).toBe(1);
+    expect(workbook.Sheets[COMMENT_TOTALS_SHEET_NAME].F2.v).toBe(1);
   });
 
   it("handles a date filter with no rows without phantom duplicates or circular subtotal formulas", async () => {
@@ -252,6 +260,23 @@ describe("exportAllImportsToExcel URL duplicate reports", () => {
     await exportAllImportsToExcel();
     expect(mocks.writeFile).not.toHaveBeenCalled();
     expect(mocks.info).toHaveBeenCalledWith("Không có imports để export");
+  });
+
+  it("reserves the new summary sheet name and counts five same-account URL rows as four duplicates", async () => {
+    setImports([{
+      id: "a", accountName: COMMENT_TOTALS_SHEET_NAME,
+      comments: Array.from({ length: 5 }, () => comment()), reactions: [reaction()],
+    }]);
+    await exportAllImportsToExcel();
+    const workbook = exportedWorkbook();
+    expect(workbook.SheetNames[0]).toBe(COMMENT_TOTALS_SHEET_NAME);
+    const summary = workbook.Sheets[COMMENT_TOTALS_SHEET_NAME];
+    expect([summary.D2.v, summary.E2.v, summary.F2.v]).toEqual([5, 4, 1]);
+    const source = workbook.Sheets[`${COMMENT_TOTALS_SHEET_NAME}_2`];
+    expect(source.A7.v).toBe("Reaction");
+    expect(source.H8.f).toBe("SUBTOTAL(9,H2:H7)");
+    const details = reportRows(workbook.Sheets[DUPLICATE_URL_SHEET_NAMES.details]);
+    expect(details.every((item) => item[5] === `${COMMENT_TOTALS_SHEET_NAME}_2`)).toBe(true);
   });
 
   it("does not export a partial workbook if a chunk fails to load", async () => {

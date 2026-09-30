@@ -350,9 +350,9 @@ export const AccountsTable = forwardRef<AccountsTableRef, AccountsTableProps>(
                 Export theo lựa chọn
               </Button>
             </Space>
-            <Tooltip title="Báo cáo theo URL ở cột G của các dòng được xuất, gồm comment, media và reaction. Không xóa dữ liệu trùng.">
+            <Tooltip title="Sheet Tổng hợp comment có số gốc, số trùng theo tài khoản + URL và tổng sau khi trừ trùng. Hai sheet URL trùng giữ đầy đủ vị trí comment, media và reaction. Không xóa dữ liệu.">
               <span className="export-report-hint">
-                Excel kèm 2 sheet URL trùng: tổng hợp và vị trí chi tiết
+                Excel kèm tổng comment sau trừ trùng và 2 sheet tra cứu URL trùng
               </span>
             </Tooltip>
           </div>

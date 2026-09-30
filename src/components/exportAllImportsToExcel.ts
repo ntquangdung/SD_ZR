@@ -26,6 +26,7 @@ import {
   DUPLICATE_URL_SHEET_NAMES,
   type ExportedUrlRow,
 } from "@/utils/duplicateUrlReport";
+import { appendCommentUrlTotals, COMMENT_TOTALS_SHEET_NAME } from "@/utils/commentUrlTotals";
 
 // If selectedIds is provided, export only those imports; otherwise export all.
 type ExcelValue = string | number;
@@ -98,11 +99,12 @@ export const exportAllImportsToExcel = async (
     }
 
     const workbook = XLSX.utils.book_new();
-    const exportedUrlRows: ExportedUrlRow[] = [];
+    const exportedRows: ExportedUrlRow[] = [];
     // Excel sheet names are case-insensitive. Reserve report names up front so
     // source links always point to the final, unambiguous account sheet name.
     const usedSheetNames = new Set(
-      Object.values(DUPLICATE_URL_SHEET_NAMES).map((name) => name.toLowerCase()),
+      [COMMENT_TOTALS_SHEET_NAME, ...Object.values(DUPLICATE_URL_SHEET_NAMES)]
+        .map((name) => name.toLowerCase()),
     );
 
     for (const importEntry of importsList) {
@@ -246,10 +248,11 @@ export const exportAllImportsToExcel = async (
       }
 
       // Capture only the rows actually exported, after filtering/skipping empty
-      // containers. The header is row 1; totals are not URL occurrences.
+      // containers. Keep blank URLs for comment totals; the duplicate URL
+      // report excludes those itself. Headers/totals are never activities.
       rows.forEach((row, index) => {
-        if (index === 0 || !row[6]) return;
-        exportedUrlRows.push({
+        if (index === 0) return;
+        exportedRows.push({
           url: String(row[6]),
           sheetName: finalName,
           rowNumber: index + 1,
@@ -360,7 +363,8 @@ export const exportAllImportsToExcel = async (
       XLSX.utils.book_append_sheet(workbook, sheet, finalName);
     }
 
-    const report = appendDuplicateUrlReport(workbook, exportedUrlRows, XLSX);
+    const report = appendDuplicateUrlReport(workbook, exportedRows, XLSX);
+    appendCommentUrlTotals(workbook, exportedRows, XLSX);
     XLSX.writeFile(workbook, "accounts-comments-reactions.xlsx", { cellStyles: true });
     message.success(
       report.duplicateUrlCount > 0
